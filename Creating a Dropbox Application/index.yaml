@@ -1,0 +1,10 @@
+indexes:
+- kind: Booking
+  properties:
+  - name: room
+  - name: start
+
+- kind: Booking
+  properties:
+  - name: room
+  - name: end

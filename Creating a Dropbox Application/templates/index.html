@@ -1,0 +1,396 @@
+<!doctype html>
+<html>
+<head>
+    <title>DropBox</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+            crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.css"/>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {#
+    <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    #}
+    <style>
+        .sidenav {
+            height: 100%; /* Full-height: remove this if you want "auto" height */
+            width: 300px; /* Set the width of the sidebar */
+            position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+            z-index: 1; /* Stay on top */
+            top: 0; /* Stay at the top */
+            left: 0;
+            background-color: skyblue;
+            overflow-x: hidden; /* Disable horizontal scroll */
+            padding-top: 60px;
+        }
+
+        /* The navigation menu links */
+        .sidenav a {
+            padding: 6px 8px 6px 16px;
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+        }
+
+        /* When you mouse over the navigation links, change their color */
+        .sidenav a:hover {
+            color: #f1f1f1;
+        }
+
+        /* Style page content */
+        .main {
+            margin-left: 300px; /* Same as the width of the sidebar */
+            padding-top: 60px;
+        }
+
+        /* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
+        @media screen and (max-height: 450px) {
+            .sidenav {
+                padding-top: 15px;
+            }
+
+            .sidenav a {
+                font-size: 18px;
+            }
+        }
+
+        .hideit {
+            -webkit-animation: seconds 0.10s forwards;
+            -webkit-animation-iteration-count: 1;
+            -webkit-animation-delay: 5s;
+            animation: seconds 0.10s forwards;
+            animation-iteration-count: 1;
+            animation-delay: 5s;
+            position: relative;
+        }
+
+        @-webkit-keyframes seconds {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                left: -9999px;
+            }
+        }
+
+        @keyframes seconds {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                left: -9999px;
+            }
+        }
+    </style>
+    <script>
+
+    </script>
+</head>
+<body>
+<script src="https://www.gstatic.com/firebasejs/8.3.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.8.0/firebase-auth.js"></script>
+<script src="{{ url_for('static', filename='app-setup.js') }}"></script>
+
+<div id="firebaseui-auth-container"></div>
+
+<div id="user-content" hidden=true>
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top" style="background-color: cadetblue">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">DropBox</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <a class="btn btn-outline-warning"
+                       href="/duplicates"
+                       role="button">Duplicates</a>
+                    <a class="btn btn-outline-warning"
+                       href="/shared"
+                       role="button">Shared</a>
+                </ul>
+                <form>
+                    <button id="sign-out" hidden=true class="btn btn-outline-light" type="submit">Sign Out</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    {% if user_data %}
+        <!-- Side navigation -->
+        <div class="sidenav">
+            <div class="container pb-5">
+                <form id="new_dir" method="post">
+                    <div class="mb-3">
+                        <label for="directory_new" class="form-label">New Directory</label>
+                        <input type="text" class="form-control" id="directory_new" name="directory_new"
+                               aria-describedby="room_id_help" required>
+                        <div id="directory_new_help" class="form-text">Enter directory name</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+                {% if error_message %}
+                    <div class="col-12 text-danger hideit" style="padding-top: 20px">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+
+                <footer class="text-center text-lg-start">
+                    {% if error_forward %}
+                        <div class="col-12 text-danger hideit" style="padding-top: 20px">
+                            {{ error_forward }}
+                        </div>
+                    {% endif %}
+                </footer>
+            </div>
+            <div class="container pt-5">
+                <form id="upload_file" method="post" enctype="multipart/form-data" onsubmit="return handle(event);">
+                    <input type="hidden" name="upload_file" value="upload_file">
+                    <div class="mb-3">
+                        <label for="file_select" class="form-label">Upload File</label>
+                        <input type="file" class="form-control" id="file_select" name="file_select"
+                               aria-describedby="room_id_help" required>
+                        <div id="file_select_help" class="form-text">Select file to upload</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+                {% if error_message %}
+                    <div class="col-12 text-danger hideit" style="padding-top: 20px">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+
+                <footer class="text-center text-lg-start">
+                    {% if error_forward %}
+                        <div class="col-12 text-danger hideit" style="padding-top: 20px">
+                            {{ error_forward }}
+                        </div>
+                    {% endif %}
+                </footer>
+
+
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="container">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between">
+                            <h4>
+                                {{ directory.key.name }}
+                            </h4>
+                            <div>
+                                {% if directory.key.name != "/" %}
+                                    <a class="btn btn-outline-success"
+                                       href="/home/{{ directory.key.name | parent_path }}"
+                                       role="button">../</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body container">
+                        <div class="row">
+                            {% set directory_keys = directory.directories %}
+                            {% set len = directory_keys | length %}
+                            {% if len > 0 %}
+                                {% for i in range(len) %}
+                                    <div class="col-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title text-truncate"
+                                                    title="{{ directory_keys[i].name.lstrip(directory.key.name).rstrip('/') }}">{{ directory_keys[i].name.lstrip(directory.key.name).rstrip("/") }}</h5>
+                                                <h6 class="card-subtitle mb-2 text-muted">Directory</h6>
+                                                <p class="card-text"></p>
+                                                <div class="row">
+                                                    <form class="col-4">
+                                                        <a class="btn btn-outline-success btn-sm"
+                                                           href="/home/{{ directory_keys[i].name }}"
+                                                           role="button">Open</a>
+                                                    </form>
+                                                    <form id="del_dir" method="post" class="col-4">
+                                                        <input type="hidden" name="directory_del"
+                                                               value="{{ directory_keys[i].name }}">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="fw-bold"></p>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="row">
+                            {% set file_names = directory.files %}
+                            {% set len = file_names | length %}
+                            {% if len > 0 %}
+                                {% for i in range(len) %}
+                                    <div class="col-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title text-truncate"
+                                                    title="{{ file_names[i] }}">{{ file_names[i] }}</h5>
+                                                <h6 class="card-subtitle mb-2 text-muted">File</h6>
+                                                <p class="card-text"></p>
+                                                <div class="row">
+                                                    <form id="dl_file" method="post" class="col-4">
+                                                        <input type="hidden" name="download_file"
+                                                               value="{{ file_names[i] }}">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm">
+                                                            Download
+                                                        </button>
+                                                    </form>
+                                                    <form id="del_file" method="post" class="col-4">
+                                                        <input type="hidden" name="file_del"
+                                                               value="{{ file_names[i] }}">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                    {% if "{}{}{}".format(user_data["email"], path, file_names[i]) not in shared %}
+                                                        <form id="share_file" method="post" class="col-4">
+                                                            <input type="hidden" name="file_share"
+                                                                   value="{{ file_names[i] }}">
+                                                            <button type="submit"
+                                                                    class="btn btn-outline-success btn-sm">Share
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <form id="unshare_file" method="post" class="col-4">
+                                                            <input type="hidden" name="file_unshare"
+                                                                   value="{{ file_names[i] }}">
+                                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                                UnShare
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="fw-bold"></p>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if duplicates %}
+                <div class="container pt-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between">
+                                <h4>
+                                    Duplicates
+                                </h4>
+                                <div>
+                                    <!--                            {% if directory.key.name != "/" %}-->
+                                        <!--                            <a class="btn btn-outline-success" href="/home/{{ directory.key.name | parent_path }}"-->
+                                        <!--                               role="button">../</a>-->
+                                        <!--                            {% endif %}-->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body container">
+                            {% for duplicate in duplicates %}
+                                <div class="row">
+                                    {% set file_names = duplicate %}
+                                    {% set len = file_names | length %}
+                                    {% if len > 0 %}
+                                        {% for i in range(len) %}
+                                            <div class="col-3">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        {% set dup = i==0 %}
+                                                        <h5 class="card-title text-truncate"
+                                                            title="{{ file_names[i] }}">{{ file_names[i] }}</h5>
+                                                        <h6 class="card-subtitle mb-2 text-muted text-truncate"
+                                                            title="{{ file_names[dup] }}">{{ file_names[dup] }}</h6>
+                                                        <p class="card-text"></p>
+                                                        <div class="row">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p class="fw-bold"></p>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+    {% endif %}
+</div>
+</body>
+<script>
+    document.onload = function () {
+        document.getElementById("new_dir").action = window.location;
+        document.getElementById("del_dir").action = window.location;
+        document.getElementById("upload_file").action = window.location;
+        document.getElementById("del_file").action = window.location;
+        document.getElementById("dl_file").action = window.location;
+        document.getElementById("share_file").action = window.location;
+        document.getElementById("unshare_file").action = window.location;
+    }
+
+    async function handle(event) {
+        event.preventDefault();
+
+        const url = "/exists";
+        fetch(url, {
+            method: "POST",
+            body: JSON.stringify({
+                claims: "{{ user_data['email'] }}",
+                path: window.location.pathname.replace("/home", ""),
+                file: document.getElementById("file_select").value.split(/(\\|\/)/g).pop()
+            })
+        }).then(
+            response => response.json()
+        ).then(
+            val => {
+                console.log(val);
+                if (val == false) {
+                    document.getElementById("upload_file").onsubmit = "";
+                    document.getElementById("upload_file").submit()
+                } else {
+                    if (confirm('File exists. Overwrite?')) {
+                        document.getElementById("upload_file").onsubmit = "";
+                        document.getElementById("upload_file").submit()
+                    } else {
+                        document.getElementById("file_select").value = ""
+                    }
+                }
+            }
+        );
+
+        // const Http = new XMLHttpRequest();
+        // const url = '/test';
+        // Http.open("POST", url);
+        // Http.send({"a":"a"});
+        //
+        // Http.onreadystatechange = (e) => {
+        //     console.log(Http.responseText)
+        // }
+
+
+        return false;
+
+
+    }
+</script>
+</html>

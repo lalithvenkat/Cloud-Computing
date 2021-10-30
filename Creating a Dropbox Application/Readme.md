@@ -7,7 +7,7 @@ The motivation of this project is to build an application that replicates the fu
 In this Application, the users can create arbitary directory structures and can upload files and download files from the service. It also provides some access to basic file sharing between accounts.
 
 I have focussed more on the functionality of this application then the UI part, have a peek of my application.
-![drop-box](Pictures/files.png)
+![drop-box](Pictures/files.PNG)
 
 ## SET-UP
 Download/clone the project and run the project by running the main.py program.
@@ -23,11 +23,11 @@ use command python main.py to run this Application.
 * Refresh.html-> This page is only to show error and redirects to the home whenever the token gets expired.
 
 #### Sharing of files between accounts
-![file-sharing](Pictures/shared.png)
+![file-sharing](Pictures/shared.PNG)
 
 #### Create and Deleting a Directory
 Users cannot delete a directory when there is another directory or files inside that directory.
-![directory-delete](Pictures/Directory-delete.png)
+![directory-delete](Pictures/Directory-delete.PNG)
 
 
 ## Documentation of explaining the methods used in this application.
